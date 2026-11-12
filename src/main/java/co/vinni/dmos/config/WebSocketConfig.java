@@ -7,12 +7,17 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 @Configuration
-@EnableWebSocket // Habilita la infraestructura de WebSockets de Spring
+@EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
+
+    private final NetworkSocketHandler networkSocketHandler;
+
+    public WebSocketConfig(NetworkSocketHandler networkSocketHandler) {
+        this.networkSocketHandler = networkSocketHandler;
+    }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new NetworkSocketHandler(), "/network-monitor")
-                .setAllowedOrigins("*"); // Permite conexiones desde cualquier origen/cliente
+        registry.addHandler(networkSocketHandler, "/chat").setAllowedOrigins("*");
     }
 }
