@@ -2,8 +2,14 @@ server:
   port: 8862
 
 spring:
+  config:
+    import: optional:file:.env[.properties]
   data:
     redis:
-      host: localhost
-      port: 6379
-
+      url: ${REDIS_URL}
+      ssl:
+        enabled: true
+logging:
+  level:
+    root: INFO
+    co.vinni.dmos: DEBUG

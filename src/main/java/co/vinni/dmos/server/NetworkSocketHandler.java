@@ -3,6 +3,7 @@ package co.vinni.dmos.server;
 import co.vinni.dmos.dto.ChatMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -14,9 +15,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class NetworkSocketHandler extends TextWebSocketHandler {
+    private static final Logger log = LoggerFactory.getLogger(NetworkSocketHandler.class);
 
     // Mapa: Sala -> Conjunto de sesiones conectadas a esa sala
     private static final Map<String, Set<WebSocketSession>> roomSessions = new ConcurrentHashMap<>();
@@ -35,17 +39,17 @@ public class NetworkSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+    public void afterConnectionEstablished(@NonNull WebSocketSession session) throws Exception {
         String room = extractRoomFromSession(session);
         joinRoom(session, room);
 
-        System.out.println("🔌 [SPRING-SERVER] Nodo conectado (" + session.getId() + ") en sala: " + room);
+        log.debug("🔌 [SPRING-SERVER] Nodo conectado (" + session.getId() + ") en sala: " + room);
         ChatMessage welcome = new ChatMessage(room, "Sistema", "Conectado a la sala #" + room);
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(welcome)));
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+    protected void handleTextMessage(@NonNull WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
 
         if ("PING".equalsIgnoreCase(payload)) {
@@ -70,9 +74,9 @@ public class NetworkSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+    public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
         leaveRoom(session);
-        System.out.println("❌ [SPRING-SERVER] Nodo desconectado: " + session.getId());
+        log.info("❌ [SPRING-SERVER] Nodo desconectado: " + session.getId());
     }
 
     // Método invocado por RedisMessageSubscriber cuando llega un mensaje desde Redis
@@ -90,7 +94,7 @@ public class NetworkSocketHandler extends TextWebSocketHandler {
                 }
             }
         } catch (IOException e) {
-            System.err.println("Error difundiendo mensaje en sala: " + e.getMessage());
+            log.error("Error difundiendo mensaje en sala: " + e.getMessage());
         }
     }
 
