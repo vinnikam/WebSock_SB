@@ -1,25 +1,24 @@
-# Etapa 1: Construcción (Build)
-FROM eclipse-temurin:17-jdk-alpine AS build
+# Etapa 1: Construcción usando una imagen que ya trae Maven y Java 21
+FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# Copiamos los archivos de Maven y descargamos dependencias (aprovecha la caché de Docker)
-COPY .mvn/ .mvn
-COPY mvnw pom.xml ./
-RUN chmod +x mvnw && ./mvnw dependency:go-offline
+# Copiamos el pom.xml y descargamos las dependencias
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
 
 # Copiamos el código fuente y compilamos el .jar
 COPY src ./src
-RUN ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests -B
 
-# Etapa 2: Ejecución (Runtime)
-FROM eclipse-temurin:17-jre-alpine
+# Etapa 2: Ejecución ligera (usamos jammy para evitar problemas de certificados SSL con Upstash)
+FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
-# Copiamos únicamente el .jar compilado desde la etapa anterior
+# Copiamos el .jar compilado desde la etapa anterior
 COPY --from=build /app/target/*.jar app.jar
 
-# Exponemos el puerto configurado en tu application.yml
+# Exponemos el puerto por defecto
 EXPOSE 8862
 
-# Comando de arranque
+# Arrancamos la aplicación
 ENTRYPOINT ["java", "-jar", "app.jar"]
