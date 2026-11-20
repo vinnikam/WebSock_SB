@@ -12,4 +12,4 @@ spring:
 logging:
   level:
     root: INFO
-    co.vinni.dmos: DEBUG
+    co.vinni.dmos: ERROR

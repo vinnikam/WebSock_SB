@@ -24,7 +24,7 @@
 
 <div class="chat-container">
     <div class="header">
-        <span>💬 Chat en Tiempo Real</span>
+        <span>💬 Chat Wsocket - @Author Vinni</span>
         <span id="status">🔴 Desconectado</span>
     </div>
 
@@ -52,22 +52,39 @@
 
     function connect() {
         currentRoom = document.getElementById("roomSelect").value;
-        // Conecta al endpoint /chat pasando la sala inicial
-        socket = new WebSocket(`ws://${window.location.host}/chat?room=${currentRoom}`);
+
+        // Detecta automáticamente wss:// en Render (HTTPS) y ws:// en local (HTTP)
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        socket = new WebSocket(`${protocol}//${window.location.host}/chat?room=${currentRoom}`);
 
         socket.onopen = () => {
             document.getElementById("status").textContent = "🟢 Conectado";
+
+            // Mantiene viva la conexión en Render evitando timeout por inactividad
+            socket.pingInterval = setInterval(() => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ sala: currentRoom, remitente: "PING", contenido: "" }));
+                }
+            }, 30000);
         };
 
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             appendMessage(data.remitente, data.contenido, data.remitente === "Sistema");
+
         };
 
         socket.onclose = () => {
+            clearInterval(socket.pingInterval);
             document.getElementById("status").textContent = "🔴 Desconectado";
         };
+
+        socket.onerror = (error) => {
+            console.error("Error en WebSocket:", error);
+            document.getElementById("status").textContent = "🔴 Error de conexión";
+        };
     }
+
 
     function changeRoom() {
         document.getElementById("messages").innerHTML = "";
